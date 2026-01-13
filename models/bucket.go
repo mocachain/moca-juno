@@ -22,6 +22,12 @@ type Bucket struct {
 	DeleteAt                   int64          `gorm:"column:delete_at"`
 	DeleteReason               string         `gorm:"column:delete_reason;type:varchar(256);"`
 
+	// Migration related fields
+	MigrationStartTime    *int64 `gorm:"column:migration_start_time"`
+	MigrationCompleteTime *int64 `gorm:"column:migration_complete_time"`
+	DestPrimarySPID       string `gorm:"column:dest_primary_sp_id;type:varchar(64)"`
+	MigrationRejectReason string `gorm:"column:migration_reject_reason;type:varchar(256)"`
+
 	StorageSize decimal.Decimal `gorm:"column:storage_size;type:DECIMAL(65, 0);not null"`
 	ChargeSize  decimal.Decimal `gorm:"column:charge_size;type:DECIMAL(65, 0);not null"`
 

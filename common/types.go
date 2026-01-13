@@ -18,6 +18,7 @@ package common
 
 import (
 	"bytes"
+	"database/sql"
 	"database/sql/driver"
 	"encoding/csv"
 	"encoding/hex"
@@ -472,10 +473,48 @@ func (a *Uint32Array) Scan(value interface{}) error {
 		*a = nil
 		return nil
 	}
-	s, ok := value.(string)
-	if !ok {
-		return fmt.Errorf("failed to scan Uint32Array value: %v", value)
+	
+	var raw []byte
+	
+	// Critical fix: support multiple input types for MySQL and PostgreSQL compatibility
+	switch v := value.(type) {
+	case []byte:
+		// MySQL returns []byte
+		if len(v) == 0 {
+			*a = nil
+			return nil
+		}
+		raw = v
+		
+	case string:
+		// PostgreSQL returns string
+		if v == "" {
+			*a = nil
+			return nil
+		}
+		raw = []byte(v)
+		
+	case sql.NullString:
+		// Handle NULL values
+		if !v.Valid || v.String == "" {
+			*a = nil
+			return nil
+		}
+		raw = []byte(v.String)
+		
+	default:
+		return fmt.Errorf("cannot scan type %T into Uint32Array", value)
 	}
+	
+	// Try JSON parsing first (for new format)
+	var arr []uint32
+	if err := json.Unmarshal(raw, &arr); err == nil {
+		*a = arr
+		return nil
+	}
+	
+	// Fallback to CSV parsing (for legacy format)
+	s := string(raw)
 	r := csv.NewReader(strings.NewReader(s))
 	records, err := r.ReadAll()
 	if err != nil {
@@ -498,12 +537,8 @@ func (a *Uint32Array) Scan(value interface{}) error {
 }
 
 func (a Uint32Array) Value() (driver.Value, error) {
-	if len(a) == 0 {
+	if a == nil {
 		return nil, nil
 	}
-	values := make([]string, len(a))
-	for i, value := range a {
-		values[i] = strconv.FormatUint(uint64(value), 10)
-	}
-	return strings.Join(values, ","), nil
+	return json.Marshal(a)
 }

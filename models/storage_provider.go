@@ -11,8 +11,9 @@ type StorageProvider struct {
 	OperatorAddress common.Address `gorm:"column:operator_address;type:BINARY(20);index:idx_operator_address"`
 	FundingAddress  common.Address `gorm:"column:funding_address;type:BINARY(20)"`
 	SealAddress     common.Address `gorm:"column:seal_address;;type:BINARY(20)"`
-	ApprovalAddress common.Address `gorm:"column:approval_address;;type:BINARY(20)"`
-	GcAddress       common.Address `gorm:"column:gc_address;type:BINARY(20)"`
+	ApprovalAddress    common.Address `gorm:"column:approval_address;;type:BINARY(20)"`
+	GcAddress          common.Address `gorm:"column:gc_address;type:BINARY(20)"`
+	MaintenanceAddress common.Address `gorm:"column:maintenance_address;type:BINARY(20);index:idx_maintenance_address"`
 	TotalDeposit    *common.Big    `gorm:"column:total_deposit"`
 	Status          string         `gorm:"column:status;type:VARCHAR(50)"`
 	Endpoint        string         `gorm:"column:endpoint;type:VARCHAR(256)"`

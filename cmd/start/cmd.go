@@ -46,6 +46,20 @@ func NewStartCmd(cmdCfg *parsecmdtypes.Config) *cobra.Command {
 				}
 			}
 
+			// Critical fix: add AutoMigrate call for schema upgrades
+			log.Info("Running database auto migration...")
+			for _, module := range ctx.Modules {
+				if prepareModule, ok := module.(modules.PrepareTablesModule); ok {
+					err = prepareModule.AutoMigrate()
+					if err != nil {
+						log.Errorw("failed to auto migrate module", "module", module.Name(), "error", err)
+						return err
+					}
+					log.Infow("auto migration completed", "module", module.Name())
+				}
+			}
+			log.Info("Database migration completed successfully")
+
 			// Run all the additional operations
 			for _, module := range ctx.Modules {
 				if module, ok := module.(modules.AdditionalOperationsModule); ok {
