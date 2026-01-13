@@ -3,6 +3,7 @@ package bucket
 import (
 	"context"
 	"errors"
+	"strconv"
 
 	abci "github.com/cometbft/cometbft/abci/types"
 	tmctypes "github.com/cometbft/cometbft/rpc/core/types"
@@ -20,7 +21,10 @@ var (
 	EventDeleteBucket            = proto.MessageName(&storagetypes.EventDeleteBucket{})
 	EventUpdateBucketInfo        = proto.MessageName(&storagetypes.EventUpdateBucketInfo{})
 	EventDiscontinueBucket       = proto.MessageName(&storagetypes.EventDiscontinueBucket{})
+	EventMigrationBucket         = proto.MessageName(&storagetypes.EventMigrationBucket{})
 	EventCompleteMigrationBucket = proto.MessageName(&storagetypes.EventCompleteMigrationBucket{})
+	EventCancelMigrationBucket   = proto.MessageName(&storagetypes.EventCancelMigrationBucket{})
+	EventRejectMigrateBucket     = proto.MessageName(&storagetypes.EventRejectMigrateBucket{})
 )
 
 var BucketEvents = map[string]bool{
@@ -28,7 +32,10 @@ var BucketEvents = map[string]bool{
 	EventDeleteBucket:            true,
 	EventUpdateBucketInfo:        true,
 	EventDiscontinueBucket:       true,
+	EventMigrationBucket:         true,
 	EventCompleteMigrationBucket: true,
+	EventCancelMigrationBucket:   true,
+	EventRejectMigrateBucket:     true,
 }
 
 func (m *Module) ExtractEventStatements(ctx context.Context, block *tmctypes.ResultBlock, txHash common.Hash, event sdk.Event) (map[string][]interface{}, error) {
@@ -75,6 +82,13 @@ func (m *Module) HandleEvent(ctx context.Context, block *tmctypes.ResultBlock, t
 			return errors.New("discontinue bucket event assert error")
 		}
 		return m.handleDiscontinueBucket(ctx, block, txHash, discontinueBucket)
+	case EventMigrationBucket:
+		migrationBucket, ok := typedEvent.(*storagetypes.EventMigrationBucket)
+		if !ok {
+			log.Errorw("type assert error", "type", "EventMigrationBucket", "event", typedEvent)
+			return errors.New("migration bucket event assert error")
+		}
+		return m.handleMigrationBucket(ctx, block, txHash, migrationBucket)
 	case EventCompleteMigrationBucket:
 		completeMigrationBucket, ok := typedEvent.(*storagetypes.EventCompleteMigrationBucket)
 		if !ok {
@@ -82,6 +96,20 @@ func (m *Module) HandleEvent(ctx context.Context, block *tmctypes.ResultBlock, t
 			return errors.New("complete migrate bucket event assert error")
 		}
 		return m.handleCompleteMigrationBucket(ctx, block, txHash, completeMigrationBucket)
+	case EventCancelMigrationBucket:
+		cancelMigrationBucket, ok := typedEvent.(*storagetypes.EventCancelMigrationBucket)
+		if !ok {
+			log.Errorw("type assert error", "type", "EventCancelMigrationBucket", "event", typedEvent)
+			return errors.New("cancel migration bucket event assert error")
+		}
+		return m.handleCancelMigrationBucket(ctx, block, txHash, cancelMigrationBucket)
+	case EventRejectMigrateBucket:
+		rejectMigrateBucket, ok := typedEvent.(*storagetypes.EventRejectMigrateBucket)
+		if !ok {
+			log.Errorw("type assert error", "type", "EventRejectMigrateBucket", "event", typedEvent)
+			return errors.New("reject migrate bucket event assert error")
+		}
+		return m.handleRejectMigrateBucket(ctx, block, txHash, rejectMigrateBucket)
 	}
 
 	return nil
@@ -161,11 +189,84 @@ func (m *Module) handleUpdateBucketInfo(ctx context.Context, block *tmctypes.Res
 	return m.db.UpdateBucket(ctx, bucket)
 }
 
+func (m *Module) handleMigrationBucket(ctx context.Context, block *tmctypes.ResultBlock, txHash common.Hash, migrationBucket *storagetypes.EventMigrationBucket) error {
+	// Set MIGRATING status and record migration start
+	migrationStartTime := block.Block.Time.UTC().Unix()
+	bucket := &models.Bucket{
+		BucketID:           common.BigToHash(migrationBucket.BucketId.BigInt()),
+		BucketName:         migrationBucket.BucketName,
+		Status:             storagetypes.BUCKET_STATUS_MIGRATING.String(),
+		MigrationStartTime: &migrationStartTime,
+		DestPrimarySPID:    strconv.FormatUint(uint64(migrationBucket.DstPrimarySpId), 10),
+		
+		// Clear other migration fields
+		MigrationCompleteTime: nil,
+		MigrationRejectReason: "",
+
+		UpdateAt:     block.Block.Height,
+		UpdateTxHash: txHash,
+		UpdateTime:   block.Block.Time.UTC().Unix(),
+	}
+
+	return m.db.UpdateBucket(ctx, bucket)
+}
+
 func (m *Module) handleCompleteMigrationBucket(ctx context.Context, block *tmctypes.ResultBlock, txHash common.Hash, completeMigrationBucket *storagetypes.EventCompleteMigrationBucket) error {
+	// Critical fix: reset status to CREATED and update primary SP
+	migrationCompleteTime := block.Block.Time.UTC().Unix()
 	bucket := &models.Bucket{
 		BucketID:                   common.BigToHash(completeMigrationBucket.BucketId.BigInt()),
 		BucketName:                 completeMigrationBucket.BucketName,
 		GlobalVirtualGroupFamilyId: completeMigrationBucket.GlobalVirtualGroupFamilyId,
+		Status:                     storagetypes.BUCKET_STATUS_CREATED.String(), // Reset to CREATED
+		MigrationCompleteTime:      &migrationCompleteTime,
+
+		// Clear migration-related fields
+		MigrationStartTime:    nil,
+		DestPrimarySPID:       "",
+		MigrationRejectReason: "",
+
+		UpdateAt:     block.Block.Height,
+		UpdateTxHash: txHash,
+		UpdateTime:   block.Block.Time.UTC().Unix(),
+	}
+
+	return m.db.UpdateBucket(ctx, bucket)
+}
+
+func (m *Module) handleCancelMigrationBucket(ctx context.Context, block *tmctypes.ResultBlock, txHash common.Hash, cancelMigrationBucket *storagetypes.EventCancelMigrationBucket) error {
+	// Critical fix: restore status to CREATED
+	bucket := &models.Bucket{
+		BucketID:   common.BigToHash(cancelMigrationBucket.BucketId.BigInt()),
+		BucketName: cancelMigrationBucket.BucketName,
+		Status:     storagetypes.BUCKET_STATUS_CREATED.String(), // Restore to CREATED
+
+		// Clear migration-related fields
+		MigrationStartTime:    nil,
+		DestPrimarySPID:       "",
+		MigrationCompleteTime: nil,
+		MigrationRejectReason: "",
+
+		UpdateAt:     block.Block.Height,
+		UpdateTxHash: txHash,
+		UpdateTime:   block.Block.Time.UTC().Unix(),
+	}
+
+	return m.db.UpdateBucket(ctx, bucket)
+}
+
+func (m *Module) handleRejectMigrateBucket(ctx context.Context, block *tmctypes.ResultBlock, txHash common.Hash, rejectMigrateBucket *storagetypes.EventRejectMigrateBucket) error {
+	// Critical fix: restore status to CREATED
+	bucket := &models.Bucket{
+		BucketID:              common.BigToHash(rejectMigrateBucket.BucketId.BigInt()),
+		BucketName:            rejectMigrateBucket.BucketName,
+		Status:                storagetypes.BUCKET_STATUS_CREATED.String(), // Restore to CREATED
+		MigrationRejectReason: "Migration rejected", // Record rejection
+
+		// Clear migration-related fields
+		MigrationStartTime:    nil,
+		DestPrimarySPID:       "",
+		MigrationCompleteTime: nil,
 
 		UpdateAt:     block.Block.Height,
 		UpdateTxHash: txHash,

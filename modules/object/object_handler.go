@@ -16,25 +16,35 @@ import (
 )
 
 var (
-	EventCreateObject       = proto.MessageName(&storagetypes.EventCreateObject{})
-	EventCancelCreateObject = proto.MessageName(&storagetypes.EventCancelCreateObject{})
-	EventSealObject         = proto.MessageName(&storagetypes.EventSealObject{})
-	EventCopyObject         = proto.MessageName(&storagetypes.EventCopyObject{})
-	EventDeleteObject       = proto.MessageName(&storagetypes.EventDeleteObject{})
-	EventRejectSealObject   = proto.MessageName(&storagetypes.EventRejectSealObject{})
-	EventDiscontinueObject  = proto.MessageName(&storagetypes.EventDiscontinueObject{})
-	EventUpdateObjectInfo   = proto.MessageName(&storagetypes.EventUpdateObjectInfo{})
+	EventCreateObject               = proto.MessageName(&storagetypes.EventCreateObject{})
+	EventCancelCreateObject         = proto.MessageName(&storagetypes.EventCancelCreateObject{})
+	EventSealObject                 = proto.MessageName(&storagetypes.EventSealObject{})
+	EventCopyObject                 = proto.MessageName(&storagetypes.EventCopyObject{})
+	EventDeleteObject               = proto.MessageName(&storagetypes.EventDeleteObject{})
+	EventRejectSealObject           = proto.MessageName(&storagetypes.EventRejectSealObject{})
+	EventDiscontinueObject          = proto.MessageName(&storagetypes.EventDiscontinueObject{})
+	EventUpdateObjectInfo           = proto.MessageName(&storagetypes.EventUpdateObjectInfo{})
+	EventUpdateObjectContent        = proto.MessageName(&storagetypes.EventUpdateObjectContent{})
+	EventUpdateObjectContentSuccess = proto.MessageName(&storagetypes.EventUpdateObjectContentSuccess{})
+	EventCancelUpdateObjectContent  = proto.MessageName(&storagetypes.EventCancelUpdateObjectContent{})
+	EventMirrorObject               = proto.MessageName(&storagetypes.EventMirrorObject{})
+	EventMirrorObjectResult         = proto.MessageName(&storagetypes.EventMirrorObjectResult{})
 )
 
 var ObjectEvents = map[string]bool{
-	EventCreateObject:       true,
-	EventCancelCreateObject: true,
-	EventSealObject:         true,
-	EventCopyObject:         true,
-	EventDeleteObject:       true,
-	EventRejectSealObject:   true,
-	EventDiscontinueObject:  true,
-	EventUpdateObjectInfo:   true,
+	EventCreateObject:               true,
+	EventCancelCreateObject:         true,
+	EventSealObject:                 true,
+	EventCopyObject:                 true,
+	EventDeleteObject:               true,
+	EventRejectSealObject:           true,
+	EventDiscontinueObject:          true,
+	EventUpdateObjectInfo:           true,
+	EventUpdateObjectContent:        true,
+	EventUpdateObjectContentSuccess: true,
+	EventCancelUpdateObjectContent:  true,
+	EventMirrorObject:               true,
+	EventMirrorObjectResult:         true,
 }
 
 func (m *Module) ExtractEventStatements(ctx context.Context, block *tmctypes.ResultBlock, txHash common.Hash, event sdk.Event) (map[string][]interface{}, error) {
@@ -109,6 +119,41 @@ func (m *Module) HandleEvent(ctx context.Context, block *tmctypes.ResultBlock, t
 			return errors.New("update object event assert error")
 		}
 		return m.handleUpdateObjectInfo(ctx, block, txHash, updateObjectInfo)
+	case EventUpdateObjectContent:
+		updateObjectContent, ok := typedEvent.(*storagetypes.EventUpdateObjectContent)
+		if !ok {
+			log.Errorw("type assert error", "type", "EventUpdateObjectContent", "event", typedEvent)
+			return errors.New("update object content event assert error")
+		}
+		return m.handleUpdateObjectContent(ctx, block, txHash, updateObjectContent)
+	case EventUpdateObjectContentSuccess:
+		updateObjectContentSuccess, ok := typedEvent.(*storagetypes.EventUpdateObjectContentSuccess)
+		if !ok {
+			log.Errorw("type assert error", "type", "EventUpdateObjectContentSuccess", "event", typedEvent)
+			return errors.New("update object content success event assert error")
+		}
+		return m.handleUpdateObjectContentSuccess(ctx, block, txHash, updateObjectContentSuccess)
+	case EventCancelUpdateObjectContent:
+		cancelUpdateObjectContent, ok := typedEvent.(*storagetypes.EventCancelUpdateObjectContent)
+		if !ok {
+			log.Errorw("type assert error", "type", "EventCancelUpdateObjectContent", "event", typedEvent)
+			return errors.New("cancel update object content event assert error")
+		}
+		return m.handleCancelUpdateObjectContent(ctx, block, txHash, cancelUpdateObjectContent)
+	case EventMirrorObject:
+		mirrorObject, ok := typedEvent.(*storagetypes.EventMirrorObject)
+		if !ok {
+			log.Errorw("type assert error", "type", "EventMirrorObject", "event", typedEvent)
+			return errors.New("mirror object event assert error")
+		}
+		return m.handleMirrorObject(ctx, block, txHash, mirrorObject)
+	case EventMirrorObjectResult:
+		mirrorObjectResult, ok := typedEvent.(*storagetypes.EventMirrorObjectResult)
+		if !ok {
+			log.Errorw("type assert error", "type", "EventMirrorObjectResult", "event", typedEvent)
+			return errors.New("mirror object result event assert error")
+		}
+		return m.handleMirrorObjectResult(ctx, block, txHash, mirrorObjectResult)
 	}
 
 	return nil
@@ -255,6 +300,154 @@ func (m *Module) handleUpdateObjectInfo(ctx context.Context, block *tmctypes.Res
 		ObjectName: updateObject.ObjectName,
 		Operator:   common.HexToAddress(updateObject.Operator),
 		Visibility: updateObject.Visibility.String(),
+
+		UpdateAt:     block.Block.Height,
+		UpdateTxHash: txHash,
+		UpdateTime:   block.Block.Time.UTC().Unix(),
+	}
+
+	return m.db.UpdateObject(ctx, object)
+}
+
+func (m *Module) handleUpdateObjectContent(ctx context.Context, block *tmctypes.ResultBlock, txHash common.Hash, updateObjectContent *storagetypes.EventUpdateObjectContent) error {
+	if updateObjectContent.PayloadSize == 0 {
+		// For 0-payload size (e.g. folder or empty file), chain updates metadata immediately.
+		// We should reflect that: set Status=SEALED (keep as is), IsUpdating=false,
+		// and update all metadata.
+		// Note: ContentType is not available in EventUpdateObjectContent proto definition
+		// The event only contains: operator, object_id, bucket_name, object_name, payload_size, checksums, version
+		// So we preserve the existing ContentType value in the database
+		object := &models.Object{
+			BucketName: updateObjectContent.BucketName,
+			ObjectName: updateObjectContent.ObjectName,
+			ObjectID:   common.BigToHash(updateObjectContent.ObjectId.BigInt()),
+
+			PayloadSize:        0, // Explicitly 0
+			CheckSums:          updateObjectContent.Checksums,
+			Version:            updateObjectContent.Version,
+			Updater:            common.HexToAddress(updateObjectContent.Operator),
+			ContentUpdatedTime: block.Block.Time.UTC().Unix(),
+
+			Status:     storagetypes.OBJECT_STATUS_SEALED.String(),
+			IsUpdating: false,
+
+			UpdateAt:     block.Block.Height,
+			UpdateTxHash: txHash,
+			UpdateTime:   block.Block.Time.UTC().Unix(),
+		}
+		return m.db.UpdateObject(ctx, object)
+	} else {
+		// For normal update, only set IsUpdating=true and Operator.
+		// Don't change Status to "UPDATING", keep it as is (likely SEALED).
+		// Don't update metadata yet.
+		object := &models.Object{
+			BucketName: updateObjectContent.BucketName,
+			ObjectName: updateObjectContent.ObjectName,
+			ObjectID:   common.BigToHash(updateObjectContent.ObjectId.BigInt()),
+
+			Updater:    common.HexToAddress(updateObjectContent.Operator),
+			IsUpdating: true,
+			// We pass Status=SEALED so that UpdateObject knows to update IsUpdating/Updater fields
+			// (via the conditional logic we added in database.go)
+			Status: storagetypes.OBJECT_STATUS_SEALED.String(),
+
+			UpdateAt:     block.Block.Height,
+			UpdateTxHash: txHash,
+			UpdateTime:   block.Block.Time.UTC().Unix(),
+		}
+		return m.db.UpdateObject(ctx, object)
+	}
+}
+
+func (m *Module) handleUpdateObjectContentSuccess(ctx context.Context, block *tmctypes.ResultBlock, txHash common.Hash, updateObjectContentSuccess *storagetypes.EventUpdateObjectContentSuccess) error {
+	object := &models.Object{
+		BucketName: updateObjectContentSuccess.BucketName,
+		ObjectName: updateObjectContentSuccess.ObjectName,
+		ObjectID:   common.BigToHash(updateObjectContentSuccess.ObjectId.BigInt()),
+
+		Status:     storagetypes.OBJECT_STATUS_SEALED.String(),
+		IsUpdating: false,
+
+		// Reflect new metadata
+		PayloadSize:        updateObjectContentSuccess.NewPayloadSize,
+		CheckSums:          updateObjectContentSuccess.NewChecksums,
+		ContentType:        updateObjectContentSuccess.ContentType,
+		Version:            updateObjectContentSuccess.Version,
+		Updater:            common.HexToAddress(updateObjectContentSuccess.Operator),
+		ContentUpdatedTime: updateObjectContentSuccess.UpdatedAt,
+
+		UpdateAt:     block.Block.Height,
+		UpdateTxHash: txHash,
+		UpdateTime:   block.Block.Time.UTC().Unix(),
+	}
+
+	return m.db.UpdateObject(ctx, object)
+}
+
+func (m *Module) handleCancelUpdateObjectContent(ctx context.Context, block *tmctypes.ResultBlock, txHash common.Hash, cancelUpdateObjectContent *storagetypes.EventCancelUpdateObjectContent) error {
+	object := &models.Object{
+		BucketName: cancelUpdateObjectContent.BucketName,
+		ObjectName: cancelUpdateObjectContent.ObjectName,
+		ObjectID:   common.BigToHash(cancelUpdateObjectContent.ObjectId.BigInt()),
+
+		Status:     storagetypes.OBJECT_STATUS_SEALED.String(),
+		IsUpdating: false,
+		Updater:    common.Address{}, // Clear updater (will be handled by conditional update)
+
+		UpdateAt:     block.Block.Height,
+		UpdateTxHash: txHash,
+		UpdateTime:   block.Block.Time.UTC().Unix(),
+	}
+
+	return m.db.UpdateObject(ctx, object)
+}
+
+func (m *Module) handleMirrorObject(ctx context.Context, block *tmctypes.ResultBlock, txHash common.Hash, mirrorObject *storagetypes.EventMirrorObject) error {
+	// Don't use SaveObject, use UpdateObject to preserve existing data.
+	// Only update mirror specific fields.
+	// Note: EventMirrorObject does not contain SourceChainID in the proto definition.
+	// SourceChainID could be set to the current chain's ID or left as zero.
+	// The model includes this field for future extensibility.
+	object := &models.Object{
+		BucketName: mirrorObject.BucketName,
+		ObjectName: mirrorObject.ObjectName,
+		ObjectID:   common.BigToHash(mirrorObject.ObjectId.BigInt()),
+
+		DestChainID:      mirrorObject.DestChainId,
+		SourceChainID:    0, // Not available in EventMirrorObject, set to 0 for now
+		MirrorStatus:     "pending",
+		MirrorFailReason: "", // Clear any previous failure reason when starting new mirror
+
+		UpdateAt:     block.Block.Height,
+		UpdateTxHash: txHash,
+		UpdateTime:   block.Block.Time.UTC().Unix(),
+	}
+
+	return m.db.UpdateObject(ctx, object)
+}
+
+func (m *Module) handleMirrorObjectResult(ctx context.Context, block *tmctypes.ResultBlock, txHash common.Hash, mirrorObjectResult *storagetypes.EventMirrorObjectResult) error {
+	// Map status code to string. Assuming 0 = success, non-zero = failed
+	// The cross-chain status codes are defined in the storage types
+	// Note: EventMirrorObjectResult does not contain detailed failure reason in the proto definition.
+	// We provide a generic message based on the status code.
+	mirrorStatus := "success"
+	failReason := ""
+
+	if mirrorObjectResult.Status != 0 {
+		mirrorStatus = "failed"
+		// Set a fixed message as requested by audit since event doesn't contain detailed reason
+		failReason = "Mirror operation failed on destination chain"
+	}
+
+	object := &models.Object{
+		BucketName: mirrorObjectResult.BucketName,
+		ObjectName: mirrorObjectResult.ObjectName,
+		ObjectID:   common.BigToHash(mirrorObjectResult.ObjectId.BigInt()),
+
+		MirrorStatus:     mirrorStatus,
+		MirrorFailReason: failReason,
+		DestChainID:      mirrorObjectResult.DestChainId,
 
 		UpdateAt:     block.Block.Height,
 		UpdateTxHash: txHash,

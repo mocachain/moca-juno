@@ -163,12 +163,11 @@ func (m *Module) handleUpdateGroupMember(ctx context.Context, block *tmctypes.Re
 	if len(membersToAdd) > 0 {
 		for _, memberToAdd := range membersToAdd {
 			groupItem := &models.Group{
-				Owner:          common.HexToAddress(updateGroupMember.Owner),
-				GroupID:        common.BigToHash(updateGroupMember.GroupId.BigInt()),
-				GroupName:      updateGroupMember.GroupName,
-				AccountID:      common.HexToAddress(memberToAdd.Member),
-				Operator:       common.HexToAddress(updateGroupMember.Operator),
-				ExpirationTime: memberToAdd.ExpirationTime.Unix(),
+				Owner:     common.HexToAddress(updateGroupMember.Owner),
+				GroupID:   common.BigToHash(updateGroupMember.GroupId.BigInt()),
+				GroupName: updateGroupMember.GroupName,
+				AccountID: common.HexToAddress(memberToAdd.Member),
+				Operator:  common.HexToAddress(updateGroupMember.Operator),
 
 				CreateAt:   block.Block.Height,
 				CreateTime: block.Block.Time.UTC().Unix(),
@@ -176,6 +175,15 @@ func (m *Module) handleUpdateGroupMember(ctx context.Context, block *tmctypes.Re
 				UpdateTime: block.Block.Time.UTC().Unix(),
 				Removed:    false,
 			}
+
+			// Critical fix: add nil check for ExpirationTime
+			if memberToAdd.ExpirationTime != nil {
+				groupItem.ExpirationTime = memberToAdd.ExpirationTime.Unix()
+			} else {
+				// If no expiration time, set to 0 or default value
+				groupItem.ExpirationTime = 0
+			}
+
 			membersToAddList = append(membersToAddList, groupItem)
 		}
 		m.db.CreateGroup(ctx, membersToAddList)

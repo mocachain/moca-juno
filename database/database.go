@@ -371,8 +371,58 @@ func (db *Impl) SaveBucket(ctx context.Context, bucket *models.Bucket) error {
 }
 
 func (db *Impl) UpdateBucket(ctx context.Context, bucket *models.Bucket) error {
-	err := db.Db.WithContext(ctx).Table((&models.Bucket{}).TableName()).Where("bucket_id = ?", bucket.BucketID).Updates(bucket).Error
-	return err
+	updates := map[string]interface{}{}
+
+	if bucket.BucketName != "" {
+		updates["bucket_name"] = bucket.BucketName
+	}
+	if bucket.PaymentAddress != (common.Address{}) {
+		updates["payment_address"] = bucket.PaymentAddress
+	}
+	if bucket.GlobalVirtualGroupFamilyId != 0 {
+		updates["global_virtual_group_family_id"] = bucket.GlobalVirtualGroupFamilyId
+	}
+	if bucket.Operator != (common.Address{}) {
+		updates["operator"] = bucket.Operator
+	}
+	if bucket.SourceType != "" {
+		updates["source_type"] = bucket.SourceType
+	}
+	if bucket.ChargedReadQuota != 0 {
+		updates["charged_read_quota"] = bucket.ChargedReadQuota
+	}
+	if bucket.Visibility != "" {
+		updates["visibility"] = bucket.Visibility
+	}
+	if bucket.Status != "" {
+		updates["status"] = bucket.Status
+		// If Status is updated, we must update migration fields, including zero values
+		updates["migration_start_time"] = bucket.MigrationStartTime
+		updates["migration_complete_time"] = bucket.MigrationCompleteTime
+		updates["dest_primary_sp_id"] = bucket.DestPrimarySPID
+		updates["migration_reject_reason"] = bucket.MigrationRejectReason
+	}
+	if bucket.DeleteAt != 0 {
+		updates["delete_at"] = bucket.DeleteAt
+	}
+	if bucket.DeleteReason != "" {
+		updates["delete_reason"] = bucket.DeleteReason
+	}
+
+	if bucket.UpdateAt != 0 {
+		updates["update_at"] = bucket.UpdateAt
+	}
+	if bucket.UpdateTxHash != (common.Hash{}) {
+		updates["update_tx_hash"] = bucket.UpdateTxHash
+	}
+	if bucket.UpdateTime != 0 {
+		updates["update_time"] = bucket.UpdateTime
+	}
+	if bucket.Removed {
+		updates["removed"] = bucket.Removed
+	}
+
+	return db.Db.WithContext(ctx).Table((&models.Bucket{}).TableName()).Where("bucket_id = ?", bucket.BucketID).Updates(updates).Error
 }
 
 func (db *Impl) SaveObject(ctx context.Context, object *models.Object) error {
@@ -384,8 +434,100 @@ func (db *Impl) SaveObject(ctx context.Context, object *models.Object) error {
 }
 
 func (db *Impl) UpdateObject(ctx context.Context, object *models.Object) error {
-	err := db.Db.WithContext(ctx).Table((&models.Object{}).TableName()).Where("object_id = ?", object.ObjectID).Updates(object).Error
-	return err
+	updates := map[string]interface{}{}
+
+	// Note: BucketName and ObjectName are immutable after object creation
+	// We use object_id as the primary key, so these fields should not be updated
+
+	if object.Creator != (common.Address{}) {
+		updates["creator"] = object.Creator
+	}
+	if object.Owner != (common.Address{}) {
+		updates["owner"] = object.Owner
+	}
+	if object.LocalVirtualGroupId != 0 {
+		updates["local_virtual_group_id"] = object.LocalVirtualGroupId
+	}
+	if object.Operator != (common.Address{}) {
+		updates["operator"] = object.Operator
+	}
+
+	// Conditional updates for status and content-related fields
+	// Only update is_updating/updater when Status is set (content lifecycle events)
+	// This ensures zero values (false, empty address) are written correctly
+	if object.Status != "" {
+		updates["status"] = object.Status
+		// Force update is_updating and updater (including zero values) when status changes
+		updates["is_updating"] = object.IsUpdating
+		updates["updater"] = object.Updater
+	}
+
+	if object.Visibility != "" {
+		updates["visibility"] = object.Visibility
+	}
+	if object.ContentType != "" {
+		updates["content_type"] = object.ContentType
+	}
+	if object.RedundancyType != "" {
+		updates["redundancy_type"] = object.RedundancyType
+	}
+	if object.SourceType != "" {
+		updates["source_type"] = object.SourceType
+	}
+	if len(object.CheckSums) > 0 {
+		updates["checksums"] = object.CheckSums
+	}
+	if object.DeleteAt != 0 {
+		updates["delete_at"] = object.DeleteAt
+	}
+	if object.DeleteReason != "" {
+		updates["delete_reason"] = object.DeleteReason
+	}
+	// Update content metadata if present
+	if object.ContentUpdatedTime != 0 {
+		updates["content_updated_time"] = object.ContentUpdatedTime
+		updates["payload_size"] = object.PayloadSize
+		updates["version"] = object.Version
+		updates["checksums"] = object.CheckSums
+		if object.ContentType != "" {
+			updates["content_type"] = object.ContentType
+		}
+	} else {
+		// If not a content update (e.g. just start update), we might have payload info?
+		if object.PayloadSize != 0 {
+			updates["payload_size"] = object.PayloadSize
+		}
+		if object.Version != 0 {
+			updates["version"] = object.Version
+		}
+	}
+
+	// Mirror related fields
+	if object.MirrorStatus != "" {
+		updates["mirror_status"] = object.MirrorStatus
+		updates["mirror_fail_reason"] = object.MirrorFailReason // can be empty to clear
+		updates["dest_chain_id"] = object.DestChainID
+		updates["source_chain_id"] = object.SourceChainID
+	}
+
+	// Common update fields
+	if object.UpdateAt != 0 {
+		updates["update_at"] = object.UpdateAt
+	}
+	if object.UpdateTxHash != (common.Hash{}) {
+		updates["update_tx_hash"] = object.UpdateTxHash
+	}
+	if object.UpdateTime != 0 {
+		updates["update_time"] = object.UpdateTime
+	}
+	if object.SealedTxHash != (common.Hash{}) {
+		updates["sealed_tx_hash"] = object.SealedTxHash
+	}
+	if object.Removed {
+		updates["removed"] = object.Removed
+	}
+
+	return db.Db.WithContext(ctx).Table((&models.Object{}).TableName()).Where("object_id = ?", object.ObjectID).Updates(updates).Error
 }
 
 func (db *Impl) GetObject(ctx context.Context, objectId common.Hash) (*models.Object, error) {

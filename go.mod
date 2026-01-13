@@ -15,7 +15,7 @@ require (
 	github.com/cosmos/cosmos-db v1.1.1
 	github.com/cosmos/cosmos-sdk v0.50.13
 	github.com/cosmos/gogoproto v1.7.0
-	github.com/evmos/evmos/v12 v12.0.0-00010101000000-000000000000
+	github.com/evmos/evmos/v12 v12.0.0-audit-fix
 	github.com/go-co-op/gocron v1.13.0
 	github.com/golangci/golangci-lint v1.53.3
 	github.com/gorilla/mux v1.8.1
@@ -37,6 +37,7 @@ require (
 	gorm.io/datatypes v1.2.0
 	gorm.io/driver/mysql v1.4.7
 	gorm.io/driver/postgres v1.5.0
+	gorm.io/driver/sqlite v1.4.3
 	gorm.io/gorm v1.24.7-0.20230306060331-85eaf9eeda11
 )
 
@@ -233,6 +234,7 @@ require (
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mattn/go-runewidth v0.0.15 // indirect
+	github.com/mattn/go-sqlite3 v1.14.15 // indirect
 	github.com/mbilski/exhaustivestruct v1.2.0 // indirect
 	github.com/mgechev/revive v1.3.2 // indirect
 	github.com/minio/highwayhash v1.0.3 // indirect
@@ -360,23 +362,23 @@ require (
 )
 
 replace (
-	cosmossdk.io/api => github.com/mocachain/moca-cosmos-sdk/api v0.0.0-20250908083143-e28da82c630a
-	cosmossdk.io/client/v2 => github.com/mocachain/moca-cosmos-sdk/client/v2 v2.0.0-20250908083143-e28da82c630a
-	cosmossdk.io/simapp => github.com/mocachain/moca-cosmos-sdk/simapp v0.0.0-20250908083143-e28da82c630a
-	cosmossdk.io/store => github.com/mocachain/moca-cosmos-sdk/store v0.0.0-20250908083143-e28da82c630a
-	cosmossdk.io/x/evidence => github.com/mocachain/moca-cosmos-sdk/x/evidence v0.0.0-20250908083143-e28da82c630a
-	cosmossdk.io/x/feegrant => github.com/mocachain/moca-cosmos-sdk/x/feegrant v0.0.0-20250908083143-e28da82c630a
-	cosmossdk.io/x/tx => github.com/mocachain/moca-cosmos-sdk/x/tx v0.0.0-20250908083143-e28da82c630a
-	cosmossdk.io/x/upgrade => github.com/mocachain/moca-cosmos-sdk/x/upgrade v0.0.0-20250908083143-e28da82c630a
+	cosmossdk.io/api => github.com/mocachain/moca-cosmos-sdk/api v0.0.0-20251209033551-33b9b80268d2
+	cosmossdk.io/client/v2 => github.com/mocachain/moca-cosmos-sdk/client/v2 v2.0.0-20251209033551-33b9b80268d2
+	cosmossdk.io/simapp => github.com/mocachain/moca-cosmos-sdk/simapp v0.0.0-20251209033551-33b9b80268d2
+	cosmossdk.io/store => github.com/mocachain/moca-cosmos-sdk/store v0.0.0-20251209033551-33b9b80268d2
+	cosmossdk.io/x/evidence => github.com/mocachain/moca-cosmos-sdk/x/evidence v0.0.0-20251209033551-33b9b80268d2
+	cosmossdk.io/x/feegrant => github.com/mocachain/moca-cosmos-sdk/x/feegrant v0.0.0-20251209033551-33b9b80268d2
+	cosmossdk.io/x/tx => github.com/mocachain/moca-cosmos-sdk/x/tx v0.0.0-20251209033551-33b9b80268d2
+	cosmossdk.io/x/upgrade => github.com/mocachain/moca-cosmos-sdk/x/upgrade v0.0.0-20251209033551-33b9b80268d2
 	github.com/btcsuite/btcd => github.com/btcsuite/btcd v0.22.1
 	github.com/btcsuite/btcd/btcec/v2 => github.com/btcsuite/btcd/btcec/v2 v2.3.2
-	github.com/cometbft/cometbft => github.com/mocachain/moca-cometbft v1.0.0-alpha.1
+	github.com/cometbft/cometbft => github.com/mocachain/moca-cometbft v1.0.0-audit-fix
 	github.com/cometbft/cometbft-db => github.com/mocachain/moca-cometbft-db v1.0.0-alpha.1
 	github.com/confio/ics23/go => github.com/cosmos/cosmos-sdk/ics23/go v0.8.0
-	github.com/cosmos/cosmos-sdk => github.com/mocachain/moca-cosmos-sdk v1.0.0-alpha.1
+	github.com/cosmos/cosmos-sdk => github.com/mocachain/moca-cosmos-sdk v1.0.0-audit-fix
 	github.com/cosmos/iavl => github.com/mocachain/moca-iavl v1.0.0-alpha.1
 	github.com/cosmos/ibc-go/v10 => github.com/mocachain/moca-ibc-go/v10 v10.0.0-alpha.1
-	github.com/ethereum/go-ethereum => github.com/zkMeLabs/go-ethereum v1.10.27-0.20250415055204-fbf69808eb10
+	github.com/ethereum/go-ethereum => github.com/mocachain/go-ethereum v1.10.27-0.20250415055204-fbf69808eb10
 	github.com/evmos/evmos/v12 => github.com/mocachain/moca/v12 v12.0.0-alpha.1
 	github.com/gogo/protobuf => github.com/regen-network/protobuf v1.3.3-alpha.regen.1
 	github.com/syndtr/goleveldb => github.com/syndtr/goleveldb v1.0.1-0.20210819022825-2ae1ddf74ef7

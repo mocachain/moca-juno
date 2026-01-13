@@ -44,6 +44,12 @@ type Object struct {
 	ContentUpdatedTime int64          `gorm:"content_updated_time"` // ContentUpdatedTime defines the content updated time, it is related to updated_at in ObjectInfo
 	Updater            common.Address `gorm:"column:updater;type:BINARY(20)"`
 	Version            int64          `gorm:"version"`
+
+	// Mirror related fields
+	SourceChainID     uint32 `gorm:"column:source_chain_id"`
+	DestChainID       uint32 `gorm:"column:dest_chain_id"`
+	MirrorStatus      string `gorm:"column:mirror_status;type:varchar(50)"`
+	MirrorFailReason  string `gorm:"column:mirror_fail_reason;type:varchar(256)"`
 }
 
 func (*Object) TableName() string {
