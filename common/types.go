@@ -473,9 +473,9 @@ func (a *Uint32Array) Scan(value interface{}) error {
 		*a = nil
 		return nil
 	}
-	
+
 	var raw []byte
-	
+
 	// Critical fix: support multiple input types for MySQL and PostgreSQL compatibility
 	switch v := value.(type) {
 	case []byte:
@@ -485,7 +485,7 @@ func (a *Uint32Array) Scan(value interface{}) error {
 			return nil
 		}
 		raw = v
-		
+
 	case string:
 		// PostgreSQL returns string
 		if v == "" {
@@ -493,7 +493,7 @@ func (a *Uint32Array) Scan(value interface{}) error {
 			return nil
 		}
 		raw = []byte(v)
-		
+
 	case sql.NullString:
 		// Handle NULL values
 		if !v.Valid || v.String == "" {
@@ -501,18 +501,18 @@ func (a *Uint32Array) Scan(value interface{}) error {
 			return nil
 		}
 		raw = []byte(v.String)
-		
+
 	default:
 		return fmt.Errorf("cannot scan type %T into Uint32Array", value)
 	}
-	
+
 	// Try JSON parsing first (for new format)
 	var arr []uint32
 	if err := json.Unmarshal(raw, &arr); err == nil {
 		*a = arr
 		return nil
 	}
-	
+
 	// Fallback to CSV parsing (for legacy format)
 	s := string(raw)
 	r := csv.NewReader(strings.NewReader(s))

@@ -195,7 +195,6 @@ func (db *Impl) createPartitionIfNotExists(table string, partitionID int64) erro
 		partitionID,
 	)
 	err := db.Db.Exec(stmt).Error
-
 	if err != nil {
 		return err
 	}
@@ -278,12 +277,12 @@ func (db *Impl) GetTotalBlocks(ctx context.Context) int64 {
 
 // SaveTx implements database.Database
 func (db *Impl) SaveTx(ctx context.Context, blockTimestamp uint64, index int, tx *types.Tx) error {
-	var sigs = make([]string, len(tx.Signatures))
+	sigs := make([]string, len(tx.Signatures))
 	for index, sig := range tx.Signatures {
 		sigs[index] = base64.StdEncoding.EncodeToString(sig)
 	}
 
-	var msgs = make([]string, len(tx.Body.Messages))
+	msgs := make([]string, len(tx.Body.Messages))
 	for index, msg := range tx.Body.Messages {
 		bz, err := db.EncodingConfig.Codec.MarshalJSON(msg)
 		if err != nil {
@@ -298,7 +297,7 @@ func (db *Impl) SaveTx(ctx context.Context, blockTimestamp uint64, index int, tx
 		return fmt.Errorf("failed to JSON encode tx fee: %s", err)
 	}
 
-	var sigInfos = make([]string, len(tx.AuthInfo.SignerInfos))
+	sigInfos := make([]string, len(tx.AuthInfo.SignerInfos))
 	for index, info := range tx.AuthInfo.SignerInfos {
 		bz, err := db.EncodingConfig.Codec.MarshalJSON(info)
 		if err != nil {
@@ -438,7 +437,6 @@ func (db *Impl) UpdateObject(ctx context.Context, object *models.Object) error {
 
 	// Note: BucketName and ObjectName are immutable after object creation
 	// We use object_id as the primary key, so these fields should not be updated
-
 	if object.Creator != (common.Address{}) {
 		updates["creator"] = object.Creator
 	}
@@ -532,7 +530,6 @@ func (db *Impl) UpdateObject(ctx context.Context, object *models.Object) error {
 
 func (db *Impl) GetObject(ctx context.Context, objectId common.Hash) (*models.Object, error) {
 	var object models.Object
-
 	err := db.Db.WithContext(ctx).Where(
 		"object_id = ? AND removed IS NOT TRUE", objectId).Find(&object).Error
 	if err != nil {

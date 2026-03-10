@@ -79,10 +79,9 @@ func (m *Module) HandleEvent(ctx context.Context, block *tmctypes.ResultBlock, _
 }
 
 func (m *Module) handleCreateGroup(ctx context.Context, block *tmctypes.ResultBlock, createGroup *storagetypes.EventCreateGroup) error {
-
 	var membersToAddList []*models.Group
 
-	//create group first
+	// create group first
 	groupItem := &models.Group{
 		Owner:      common.HexToAddress(createGroup.Owner),
 		GroupID:    common.BigToHash(createGroup.GroupId.BigInt()),
@@ -113,7 +112,7 @@ func (m *Module) handleDeleteGroup(ctx context.Context, block *tmctypes.ResultBl
 		Removed:    true,
 	}
 
-	//update group item
+	// update group item
 	groupItem := &models.Group{
 		GroupID:   common.BigToHash(deleteGroup.GroupId.BigInt()),
 		AccountID: common.HexToAddress("0"),
@@ -139,7 +138,7 @@ func (m *Module) handleLeaveGroup(ctx context.Context, block *tmctypes.ResultBlo
 		Removed:    true,
 	}
 
-	//update group item
+	// update group item
 	groupItem := &models.Group{
 		GroupID:   common.BigToHash(leaveGroup.GroupId.BigInt()),
 		AccountID: common.HexToAddress("0"),
@@ -154,7 +153,6 @@ func (m *Module) handleLeaveGroup(ctx context.Context, block *tmctypes.ResultBlo
 }
 
 func (m *Module) handleUpdateGroupMember(ctx context.Context, block *tmctypes.ResultBlock, updateGroupMember *storagetypes.EventUpdateGroupMember) error {
-
 	membersToAdd := updateGroupMember.MembersToAdd
 	membersToDelete := updateGroupMember.MembersToDelete
 
@@ -204,7 +202,7 @@ func (m *Module) handleUpdateGroupMember(ctx context.Context, block *tmctypes.Re
 		m.db.UpdateGroup(ctx, groupItem)
 	}
 
-	//update group item
+	// update group item
 	groupItem := &models.Group{
 		GroupID:   common.BigToHash(updateGroupMember.GroupId.BigInt()),
 		AccountID: common.HexToAddress("0"),

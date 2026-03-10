@@ -198,7 +198,7 @@ func (m *Module) handleMigrationBucket(ctx context.Context, block *tmctypes.Resu
 		Status:             storagetypes.BUCKET_STATUS_MIGRATING.String(),
 		MigrationStartTime: &migrationStartTime,
 		DestPrimarySPID:    strconv.FormatUint(uint64(migrationBucket.DstPrimarySpId), 10),
-		
+
 		// Clear other migration fields
 		MigrationCompleteTime: nil,
 		MigrationRejectReason: "",
@@ -261,7 +261,7 @@ func (m *Module) handleRejectMigrateBucket(ctx context.Context, block *tmctypes.
 		BucketID:              common.BigToHash(rejectMigrateBucket.BucketId.BigInt()),
 		BucketName:            rejectMigrateBucket.BucketName,
 		Status:                storagetypes.BUCKET_STATUS_CREATED.String(), // Restore to CREATED
-		MigrationRejectReason: "Migration rejected", // Record rejection
+		MigrationRejectReason: "Migration rejected",                        // Record rejection
 
 		// Clear migration-related fields
 		MigrationStartTime:    nil,
