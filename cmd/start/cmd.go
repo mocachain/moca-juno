@@ -20,9 +20,7 @@ import (
 	"github.com/forbole/juno/v4/types/utils"
 )
 
-var (
-	waitGroup sync.WaitGroup
-)
+var waitGroup sync.WaitGroup
 
 // NewStartCmd returns the command that should be run when we want to start parsing a chain state.
 func NewStartCmd(cmdCfg *parsecmdtypes.Config) *cobra.Command {
@@ -231,7 +229,7 @@ func mustGetLatestHeight(ctx *parser.Context) uint64 {
 // trapSignal will listen for any OS signal and invoke Done on the main
 // WaitGroup allowing the main process to gracefully exit.
 func trapSignal(ctx *parser.Context) {
-	var sigCh = make(chan os.Signal, 1)
+	sigCh := make(chan os.Signal, 1)
 
 	signal.Notify(sigCh, syscall.SIGTERM)
 	signal.Notify(sigCh, syscall.SIGINT)
