@@ -16,7 +16,7 @@
 #
 # To exit the bash, just execute
 # > exit
-FROM golang:alpine AS build-env
+FROM golang:1.23.6-alpine AS build-env
 
 # Set up dependencies
 ENV PACKAGES curl make git libc-dev bash gcc linux-headers eudev-dev py-pip
