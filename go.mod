@@ -373,23 +373,23 @@ require (
 )
 
 replace (
-	cosmossdk.io/api => github.com/mocachain/moca-cosmos-sdk/api v1.2.0-rc1-b329d8b
-	cosmossdk.io/client/v2 => github.com/mocachain/moca-cosmos-sdk/client/v2 v2.1.0-rc1-b329d8b
-	cosmossdk.io/simapp => github.com/mocachain/moca-cosmos-sdk/simapp v1.2.0-rc1-b329d8b
-	cosmossdk.io/store => github.com/mocachain/moca-cosmos-sdk/store v1.2.0-rc1-b329d8b
-	cosmossdk.io/x/evidence => github.com/mocachain/moca-cosmos-sdk/x/evidence v1.2.0-rc1-b329d8b
-	cosmossdk.io/x/feegrant => github.com/mocachain/moca-cosmos-sdk/x/feegrant v1.2.0-rc1-b329d8b
-	cosmossdk.io/x/nft => github.com/mocachain/moca-cosmos-sdk/x/nft v1.2.0-rc1-b329d8b
-	cosmossdk.io/x/tx => github.com/mocachain/moca-cosmos-sdk/x/tx v1.2.0-rc1-b329d8b
-	cosmossdk.io/x/upgrade => github.com/mocachain/moca-cosmos-sdk/x/upgrade v1.2.0-rc1-b329d8b
+	cosmossdk.io/api => github.com/mocachain/moca-cosmos-sdk/api v1.2.0-rc0.0.20260320020435-a29d423d1f97
+	cosmossdk.io/client/v2 => github.com/mocachain/moca-cosmos-sdk/client/v2 v2.0.0-20260320020435-a29d423d1f97
+	cosmossdk.io/simapp => github.com/mocachain/moca-cosmos-sdk/simapp v1.2.0-rc0.0.20260320020435-a29d423d1f97
+	cosmossdk.io/store => github.com/mocachain/moca-cosmos-sdk/store v1.2.0-rc0.0.20260320020435-a29d423d1f97
+	cosmossdk.io/x/evidence => github.com/mocachain/moca-cosmos-sdk/x/evidence v1.1.1-0.20260320020435-a29d423d1f97
+	cosmossdk.io/x/feegrant => github.com/mocachain/moca-cosmos-sdk/x/feegrant v1.1.1-0.20260320020435-a29d423d1f97
+	cosmossdk.io/x/nft => github.com/mocachain/moca-cosmos-sdk/x/nft v1.2.0-rc0.0.20260320020435-a29d423d1f97
+	cosmossdk.io/x/tx => github.com/mocachain/moca-cosmos-sdk/x/tx v1.2.0-rc0.0.20260320020435-a29d423d1f97
+	cosmossdk.io/x/upgrade => github.com/mocachain/moca-cosmos-sdk/x/upgrade v1.1.1-0.20260320020435-a29d423d1f97
 	github.com/btcsuite/btcd => github.com/btcsuite/btcd v0.22.1
 	github.com/btcsuite/btcd/btcec/v2 => github.com/btcsuite/btcd/btcec/v2 v2.3.4
-	github.com/cometbft/cometbft => github.com/mocachain/moca-cometbft v1.2.0-rc2-279e646
+	github.com/cometbft/cometbft => github.com/mocachain/moca-cometbft v1.2.0-rc0.0.20260319090650-6c202b1a2ec8
 	github.com/cometbft/cometbft-db => github.com/mocachain/moca-cometbft-db v1.1.0-rc1-22256c4
 	github.com/confio/ics23/go => github.com/cosmos/cosmos-sdk/ics23/go v0.8.0
-	github.com/cosmos/cosmos-sdk => github.com/mocachain/moca-cosmos-sdk v1.2.0-rc13-b329d8b
-	github.com/cosmos/iavl => github.com/mocachain/moca-iavl v1.2.0-rc1-7d754d4
-	github.com/cosmos/ibc-go/v10 => github.com/mocachain/moca-ibc-go/v10 v10.2.0-rc1-6647ca4
+	github.com/cosmos/cosmos-sdk => github.com/mocachain/moca-cosmos-sdk v1.2.0-rc0.0.20260320020435-a29d423d1f97
+	github.com/cosmos/iavl => github.com/mocachain/moca-iavl v1.2.0-rc0.0.20260318093905-7d754d41e8e9
+	github.com/cosmos/ibc-go/v10 => github.com/mocachain/moca-ibc-go/v10 v10.2.0-rc0.0.20260320021434-9f70a0d36b73
 	github.com/ethereum/go-ethereum => github.com/mocachain/go-ethereum v1.10.27-rc1-e849a5b
 	github.com/evmos/evmos/v12 => github.com/mocachain/moca/v12 v12.2.0-rc2-22be1bc
 	github.com/gogo/protobuf => github.com/regen-network/protobuf v1.3.3-alpha.regen.1
