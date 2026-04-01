@@ -92,7 +92,8 @@ func Init(lvl Level, path string) {
 				logger.With("err", err).Panicf("make log dir failed")
 			}
 		} else if err != nil {
-			logger.With("err", err).Panicf("invalid dir stat")
+			logger.With("err", err, "dir", dir, "path", path).Warnf("log dir stat failed, falling back to stderr")
+			return
 		}
 
 		logger.SetWriter(NewMultiWriteSyncer(NewAsyncFileWriter(path, 10*1024*1024),
