@@ -216,7 +216,6 @@ func (cp *Node) Tx(hash string) (*types.Tx, error) {
 		err = cp.codec.UnpackAny(msg, &stdMsg)
 		if err != nil {
 			log.Errorw("error while unpacking message", "err", err)
-			//return nil, fmt.Errorf("error while unpacking message: %s", err)
 		}
 	}
 

@@ -11,7 +11,6 @@ import (
 	"github.com/forbole/juno/v4/modules/bucket"
 	"github.com/forbole/juno/v4/modules/epoch"
 	"github.com/forbole/juno/v4/modules/group"
-	"github.com/forbole/juno/v4/modules/messages"
 	"github.com/forbole/juno/v4/modules/object"
 	"github.com/forbole/juno/v4/modules/payment"
 	"github.com/forbole/juno/v4/modules/permission"
@@ -74,15 +73,11 @@ var (
 )
 
 // DefaultRegistrar represents a registrar that allows to handle the default Juno modules
-type DefaultRegistrar struct {
-	parser messages.MessageAddressesParser
-}
+type DefaultRegistrar struct{}
 
 // NewDefaultRegistrar builds a new DefaultRegistrar
-func NewDefaultRegistrar(parser messages.MessageAddressesParser) *DefaultRegistrar {
-	return &DefaultRegistrar{
-		parser: parser,
-	}
+func NewDefaultRegistrar() *DefaultRegistrar {
+	return &DefaultRegistrar{}
 }
 
 // BuildModules implements Registrar

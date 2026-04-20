@@ -39,10 +39,6 @@ type Indexer interface {
 	// An error is returned if write fails.
 	ExportTxs(block *tmctypes.ResultBlock, txs []*types.Tx) error
 
-	// ExportCommit accepts ResultValidators and persists validator commit signatures inside the database.
-	// An error is returned if write fails.
-	ExportCommit(block *tmctypes.ResultBlock, getTmcValidators modules.GetTmcValidators) error
-
 	// ExportEvents accepts a slice of transactions and get events in order to save in database.
 	ExportEvents(ctx context.Context, block *tmctypes.ResultBlock, events *tmctypes.ResultBlockResults) error
 
@@ -61,9 +57,6 @@ type Indexer interface {
 
 	// HandleEvent accepts the transaction and handles events contained inside the transaction.
 	HandleEvent(ctx context.Context, block *tmctypes.ResultBlock, txHash common.Hash, event sdk.Event) error
-
-	// ExportEpoch accepts a finalized block height and block hash then inside the database.
-	ExportEpoch(block *tmctypes.ResultBlock) error
 
 	// GetBlockRecordNum returns total number of blocks stored in database.
 	GetBlockRecordNum(ctx context.Context) int64
@@ -91,10 +84,6 @@ type Impl struct {
 
 	Node node.Node
 	DB   database.Database
-}
-
-func (i *Impl) ExportEpoch(block *tmctypes.ResultBlock) error {
-	return nil
 }
 
 func (i *Impl) HandleGenesis(genesisDoc *tmtypes.GenesisDoc, appState map[string]json.RawMessage) error {
@@ -236,43 +225,6 @@ func (i *Impl) ExportBlock(
 	}
 
 	i.HandleBlock(block, events, txs, getTmcValidators)
-
-	return nil
-}
-
-// ExportCommit accepts a block commitment and a corresponding set of
-// validators for the commitment and persists them to the database. An error is
-// returned if any write fails or if there is any missed aggregated data.
-func (i *Impl) ExportCommit(block *tmctypes.ResultBlock, getTmcValidators modules.GetTmcValidators) error {
-	commit := block.Block.LastCommit
-
-	var signatures []*types.CommitSig
-	for _, commitSig := range commit.Signatures {
-		// Avoid empty commits
-		if commitSig.Signature == nil {
-			continue
-		}
-
-		valAddr := sdk.ConsAddress(commitSig.ValidatorAddress)
-		vals, _ := getTmcValidators(block.Block.Height)
-		val := FindValidatorByAddr(valAddr.String(), vals)
-		if val == nil {
-			return fmt.Errorf("failed to find validator by commit validator address %s", valAddr.String())
-		}
-
-		signatures = append(signatures, types.NewCommitSig(
-			types.ConvertValidatorAddressToBech32String(commitSig.ValidatorAddress),
-			val.VotingPower,
-			val.ProposerPriority,
-			commit.Height,
-			commitSig.Timestamp,
-		))
-	}
-
-	err := i.DB.SaveCommitSignatures(context.TODO(), signatures)
-	if err != nil {
-		return fmt.Errorf("error while saving commit signatures: %s", err)
-	}
 
 	return nil
 }
