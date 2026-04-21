@@ -9,8 +9,6 @@ import (
 
 	"github.com/forbole/juno/v4/common"
 	"github.com/forbole/juno/v4/models"
-
-	//"gorm.io/driver/postgres"
 )
 
 type DBType struct {

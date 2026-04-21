@@ -52,10 +52,6 @@ type Database interface {
 	// An error is returned if the operation fails.
 	SaveTx(ctx context.Context, blockTimestamp uint64, index int, tx *types.Tx) error
 
-	// SaveCommitSignatures stores a  slice of validator commit signatures.
-	// An error is returned if the operation fails.
-	SaveCommitSignatures(ctx context.Context, signatures []*types.CommitSig) error
-
 	// SaveBucket will be called to save each bucket contained inside a block.
 	// An error is returned if the operation fails.
 	SaveBucket(ctx context.Context, bucket *models.Bucket) error
@@ -75,8 +71,6 @@ type Database interface {
 	// GetObject returns an object model with given objectId.
 	// It should return only one record
 	GetObject(ctx context.Context, objectId common.Hash) (*models.Object, error)
-
-	SaveEpoch(ctx context.Context, epoch *models.Epoch) error
 
 	GetEpoch(ctx context.Context) (*models.Epoch, error)
 
@@ -133,8 +127,6 @@ type Database interface {
 	SaveVGF(ctx context.Context, vgf *models.GlobalVirtualGroupFamily) error
 
 	UpdateVGF(ctx context.Context, vgf *models.GlobalVirtualGroupFamily) error
-
-	SaveDBStatistics(ctx context.Context, ds *models.DataStat) error
 
 	// Begin begins a transaction with any transaction options opts
 	Begin(ctx context.Context) *Impl
@@ -339,28 +331,6 @@ func (db *Impl) SaveTx(ctx context.Context, blockTimestamp uint64, index int, tx
 	return err
 }
 
-// SaveCommitSignatures implements database.Database
-func (db *Impl) SaveCommitSignatures(ctx context.Context, signatures []*types.CommitSig) error {
-	if len(signatures) == 0 {
-		return nil
-	}
-
-	stmt := `INSERT INTO pre_commit (validator_address, height, timestamp, voting_power, proposer_priority) VALUES `
-
-	var sparams []interface{}
-	for i, sig := range signatures {
-		si := i * 5
-
-		stmt += fmt.Sprintf("($%d, $%d, $%d, $%d, $%d),", si+1, si+2, si+3, si+4, si+5)
-		sparams = append(sparams, sig.ValidatorAddress, sig.Height, sig.Timestamp, sig.VotingPower, sig.ProposerPriority)
-	}
-
-	stmt = stmt[:len(stmt)-1]
-	stmt += " ON CONFLICT (validator_address, timestamp) DO NOTHING"
-	err := db.Db.WithContext(ctx).Exec(stmt, sparams...).Error
-	return err
-}
-
 func (db *Impl) SaveBucket(ctx context.Context, bucket *models.Bucket) error {
 	err := db.Db.WithContext(ctx).Table((&models.Bucket{}).TableName()).Clauses(clause.OnConflict{
 		Columns:   []clause.Column{{Name: "bucket_id"}},
@@ -554,14 +524,6 @@ func (db *Impl) SavePaymentAccount(ctx context.Context, paymentAccount *models.P
 	return err
 }
 
-func (db *Impl) SaveEpoch(ctx context.Context, epoch *models.Epoch) error {
-	err := db.Db.Table((&models.Epoch{}).TableName()).Clauses(clause.OnConflict{
-		Columns:   []clause.Column{{Name: "one_row_id"}},
-		DoUpdates: clause.AssignmentColumns([]string{"block_height", "block_hash", "update_time"}),
-	}).Create(epoch).Error
-	return err
-}
-
 func (db *Impl) GetEpoch(ctx context.Context) (*models.Epoch, error) {
 	var epoch models.Epoch
 
@@ -656,10 +618,6 @@ func (db *Impl) SaveVGF(ctx context.Context, vgf *models.GlobalVirtualGroupFamil
 func (db *Impl) UpdateVGF(ctx context.Context, vgf *models.GlobalVirtualGroupFamily) error {
 	err := db.Db.WithContext(ctx).Table((&models.GlobalVirtualGroupFamily{}).TableName()).Where("global_virtual_group_family_id = ?", vgf.GlobalVirtualGroupFamilyId).Updates(vgf).Error
 	return err
-}
-
-func (db *Impl) SaveDBStatistics(ctx context.Context, ds *models.DataStat) error {
-	return nil
 }
 
 func (db *Impl) Begin(ctx context.Context) *Impl {
