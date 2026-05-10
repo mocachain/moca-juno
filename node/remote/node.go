@@ -20,7 +20,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/types/tx"
 	"github.com/cosmos/cosmos-sdk/types/tx/signing"
 	authtx "github.com/cosmos/cosmos-sdk/x/auth/tx"
-	gftypes "github.com/evmos/evmos/v12/sdk/types"
+	gftypes "github.com/mocachain/moca/v2/sdk/types"
 	"google.golang.org/grpc"
 
 	"github.com/forbole/juno/v4/log"
