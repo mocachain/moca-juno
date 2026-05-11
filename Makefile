@@ -1,5 +1,16 @@
-VERSION := $(shell echo $(shell git describe --tags) | sed 's/^v//')
+VERSION := $(shell git describe --tags --always 2>/dev/null | sed 's/^v//')
 COMMIT  := $(shell git log -1 --format='%H')
+GO_TOOLCHAIN ?= go1.23.12
+GO_BINARY ?= $(shell command -v go 2>/dev/null || echo go)
+GO_LOCAL_ENV ?= env -u GOROOT GOTOOLCHAIN=$(GO_TOOLCHAIN)
+GO := $(GO_LOCAL_ENV) $(GO_BINARY)
+GO_GOPATH ?= $(shell $(GO) env GOPATH 2>/dev/null)
+GO_BIN ?= $(or $(GOBIN),$(if $(GO_GOPATH),$(GO_GOPATH)/bin,$(HOME)/go/bin))
+LEFTHOOK ?= $(GO_BIN)/lefthook
+LEFTHOOK_VERSION ?= v1.11.3
+GOLANGCI_LINT ?= $(GO_BIN)/golangci-lint
+GOLANGCI_LINT_VERSION ?= v1.64.8
+LINT_TIMEOUT ?= 10m
 
 export GO111MODULE = on
 
@@ -25,10 +36,10 @@ BUILD_FLAGS := -ldflags '$(LD_FLAGS)'
 build: go.sum
 ifeq ($(OS),Windows_NT)
 	@echo "building juno binary..."
-	@go build -mod=readonly $(BUILD_FLAGS) -o build/juno.exe ./cmd/juno
+	@$(GO) build -mod=readonly $(BUILD_FLAGS) -o build/juno.exe ./cmd/juno
 else
 	@echo "building juno binary..."
-	@go build -mod=readonly $(BUILD_FLAGS) -o build/juno ./cmd/juno
+	@$(GO) build -mod=readonly $(BUILD_FLAGS) -o build/juno ./cmd/juno
 endif
 .PHONY: build
 
@@ -38,7 +49,7 @@ endif
 
 install: go.sum
 	@echo "installing juno binary..."
-	@go install -mod=readonly $(BUILD_FLAGS) ./cmd/juno
+	@$(GO) install -mod=readonly $(BUILD_FLAGS) ./cmd/juno
 .PHONY: install
 
 ###############################################################################
@@ -47,12 +58,12 @@ install: go.sum
 
 go-mod-cache: go.sum
 	@echo "--> Download go modules to local cache"
-	@go mod download
+	@$(GO) mod download
 
 go.sum: go.mod
 	@echo "--> Ensure dependencies have not been modified"
-	@go mod verify
-	@go mod tidy
+	@$(GO) mod verify
+	@$(GO) mod tidy
 
 clean:
 	rm -rf $(BUILDDIR)/
@@ -75,28 +86,91 @@ start-docker-test: stop-docker-test
 
 coverage:
 	@echo "viewing test coverage..."
-	@go tool cover --html=coverage.out
+	@$(GO) tool cover --html=coverage.out
 .PHONY: coverage
 
 test-unit: start-docker-test
 	@echo "Executing unit tests..."
-	@go test -mod=readonly -v -coverprofile coverage.txt ./...
+	@$(GO) test -mod=readonly -v -coverprofile coverage.txt ./...
 .PHONY: test-unit
 
 ###############################################################################
 ###                                Linting                                  ###
 ###############################################################################
-golangci_lint_cmd=github.com/golangci/golangci-lint/cmd/golangci-lint
+check-go-env:
+	@echo "--> Using Go binary: $(GO_BINARY)"
+	@$(GO) version
+	@echo "--> Repository toolchain: $(GO_TOOLCHAIN)"
+	@echo "--> Ignoring external GOROOT for repository commands"
+.PHONY: check-go-env
 
-lint:
+install-lint:
+	@$(GO) install github.com/golangci/golangci-lint/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION)
+.PHONY: install-lint
+
+check-lint:
+	@if [ ! -x "$(GOLANGCI_LINT)" ]; then \
+		echo "golangci-lint not found at $(GOLANGCI_LINT)"; \
+		echo "Run 'make install-lint' first."; \
+		exit 1; \
+	fi
+	@echo "--> Using golangci-lint binary: $(GOLANGCI_LINT)"
+	@$(GOLANGCI_LINT) version
+.PHONY: check-lint
+
+hooks:
+	@if [ ! -x "$(LEFTHOOK)" ]; then \
+		echo "--> Installing lefthook $(LEFTHOOK_VERSION) into $(GO_BIN)"; \
+		$(GO) install github.com/evilmartians/lefthook@$(LEFTHOOK_VERSION); \
+	else \
+		echo "--> Using lefthook binary: $(LEFTHOOK)"; \
+	fi
+	@$(LEFTHOOK) install
+.PHONY: hooks
+
+lint: check-go-env check-lint
 	@echo "--> Running linter"
-	@go run $(golangci_lint_cmd) run --timeout=10m
+	@$(GOLANGCI_LINT) run --timeout $(LINT_TIMEOUT)
+.PHONY: lint
 
-lint-fix:
+lint-fix: check-go-env check-lint
 	@echo "--> Running linter"
-	@go run $(golangci_lint_cmd) run --fix --out-format=tab --issues-exit-code=0
+	@$(GOLANGCI_LINT) run --fix --out-format=tab --issues-exit-code=0 --timeout $(LINT_TIMEOUT)
+.PHONY: lint-fix
 
-.PHONY: lint lint-fix
+lint-changed: check-go-env check-lint
+	@changed_go_files="$$( { git diff --name-only --diff-filter=ACMR HEAD; git ls-files --others --exclude-standard; } | grep '\.go$$' | sort -u || true )"; \
+	if { git diff --name-only --diff-filter=ACMR HEAD; git ls-files --others --exclude-standard; } | grep -Eq '(^|/)(go\.mod|go\.sum)$$'; then \
+		echo "--> go.mod/go.sum changed; running full golangci-lint..."; \
+		$(GOLANGCI_LINT) run --timeout $(LINT_TIMEOUT); \
+	elif [ -z "$$changed_go_files" ]; then \
+		echo "--> No local changed Go files to lint"; \
+	else \
+		changed_dirs="$$(printf '%s\n' "$$changed_go_files" | xargs -n1 dirname | sed 's#^\.$$#./.#' | sed 's#^[^./]#./&#' | sort -u)"; \
+		echo "--> Running golangci-lint on local changed Go packages..."; \
+		$(GOLANGCI_LINT) run --timeout $(LINT_TIMEOUT) $$changed_dirs; \
+	fi
+.PHONY: lint-changed
+
+lint-staged: check-go-env check-lint
+	@staged_go_files="$$(git diff --cached --name-only --diff-filter=ACMR | grep '\.go$$' | sort -u || true)"; \
+	if git diff --cached --name-only --diff-filter=ACMR | grep -Eq '(^|/)(go\.mod|go\.sum)$$'; then \
+		echo "--> go.mod/go.sum changed; running full golangci-lint..."; \
+		$(GOLANGCI_LINT) run --timeout $(LINT_TIMEOUT); \
+	elif [ -z "$$staged_go_files" ]; then \
+		echo "--> No staged Go files to lint"; \
+	else \
+		staged_dirs="$$(printf '%s\n' "$$staged_go_files" | xargs -n1 dirname | sed 's#^\.$$#./.#' | sed 's#^[^./]#./&#' | sort -u)"; \
+		echo "--> Running golangci-lint on staged Go packages..."; \
+		$(GOLANGCI_LINT) run --timeout $(LINT_TIMEOUT) $$staged_dirs; \
+	fi
+.PHONY: lint-staged
+
+pre-commit: lint-changed
+.PHONY: pre-commit
+
+pre-commit-staged: lint-staged
+.PHONY: pre-commit-staged
 
 format:
 	find . -name '*.go' -type f -not -path "./vendor*" -not -path "*.git*" -not -name '*.pb.go' -not -path "./venv" | xargs gofmt -w -s
@@ -104,4 +178,4 @@ format:
 	find . -name '*.go' -type f -not -path "./vendor*" -not -path "*.git*" -not -name '*.pb.go' -not -path "./venv" | xargs goimports -w -local github.com/forbole/juno
 .PHONY: format
 
-.PHONY: lint lint-fix format
+.PHONY: format
