@@ -67,7 +67,13 @@ func NewNode(cfg *Details, codec codec.Codec) (*Node, error) {
 	}
 
 	cdc := gftypes.Codec()
-	txConfig := authtx.NewTxConfig(cdc, []signing.SignMode{signing.SignMode_SIGN_MODE_EIP_712})
+	txConfig, err := authtx.NewTxConfigWithOptions(cdc, authtx.ConfigOptions{
+		EnabledSignModes: []signing.SignMode{signing.SignMode_SIGN_MODE_EIP_712},
+		SigningContext:   cdc.InterfaceRegistry().SigningContext(),
+	})
+	if err != nil {
+		return nil, err
+	}
 	clientCtx := sdkclient.Context{}.
 		WithCodec(cdc).
 		WithInterfaceRegistry(cdc.InterfaceRegistry()).
