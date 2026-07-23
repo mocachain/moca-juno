@@ -2,7 +2,7 @@ package types
 
 import (
 	"cosmossdk.io/simapp/params"
-	"github.com/evmos/evmos/v12/encoding"
+	"github.com/mocachain/moca/v2/encoding"
 
 	"github.com/forbole/juno/v4/database"
 	"github.com/forbole/juno/v4/database/builder"
