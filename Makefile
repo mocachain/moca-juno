@@ -1,6 +1,6 @@
 VERSION := $(shell git describe --tags --always 2>/dev/null | sed 's/^v//')
 COMMIT  := $(shell git log -1 --format='%H')
-GO_TOOLCHAIN ?= go1.26.10
+GO_TOOLCHAIN ?= go1.26.11
 GO_BINARY ?= $(shell command -v go 2>/dev/null || echo go)
 GO_LOCAL_ENV ?= env -u GOROOT GOTOOLCHAIN=$(GO_TOOLCHAIN)
 GO := $(GO_LOCAL_ENV) $(GO_BINARY)

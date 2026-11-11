@@ -1,6 +1,6 @@
 module github.com/forbole/juno/v4
 
-go 1.26.10
+go 1.26.11
 
 require (
 	cosmossdk.io/log v1.6.1
