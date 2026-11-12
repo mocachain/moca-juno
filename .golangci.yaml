@@ -1,20 +1,13 @@
+version: "2"
 run:
   tests: false
-#   # timeout for analysis, e.g. 30s, 5m, default is 1m
-#   timeout: 5m
-
 linters:
-  disable-all: true
+  default: none
   enable:
     - bodyclose
-    - depguard
     - dogsled
-    - exportloopref
     - gocritic
-    - gofmt
-    - goimports
     - gosec
-    - gosimple
     - govet
     - ineffassign
     - misspell
@@ -22,41 +15,56 @@ linters:
     - nolintlint
     - revive
     - staticcheck
-    - stylecheck
-    - typecheck
     - unconvert
     - unparam
     - unused
-
+  settings:
+    dogsled:
+      max-blank-identifiers: 3
+    nolintlint:
+      require-explanation: false
+      require-specific: false
+      allow-unused: false
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    rules:
+      - linters:
+          - gosec
+        text: Use of weak random number generator
+      - linters:
+          - revive
+        text: comment on exported var
+      - linters:
+          - revive
+        text: don't use an underscore in package name
+      - linters:
+          - staticcheck
+        text: 'ST1003:'
+      - linters:
+          - staticcheck
+        text: 'ST1016:'
+      - linters:
+          - gocritic
+        text: 'singleCaseSwitch: should rewrite switch statement to if statement'
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
 issues:
-  exclude-rules:
-    - text: "Use of weak random number generator"
-      linters:
-        - gosec
-    - text: "comment on exported var"
-      linters:
-        - revive
-    - text: "don't use an underscore in package name"
-      linters:
-        - revive
-    - text: "ST1003:"
-      linters:
-        - stylecheck
-    - text: "ST1016:"
-      linters:
-        - stylecheck
-    - text: "singleCaseSwitch: should rewrite switch statement to if statement"
-      linters:
-        - gocritic
-
   max-issues-per-linter: 10000
   max-same-issues: 10000
-
-linters-settings:
-  dogsled:
-    max-blank-identifiers: 3
-  nolintlint:
-    allow-unused: false
-    allow-leading-space: true
-    require-explanation: false
-    require-specific: false
+formatters:
+  enable:
+    - gofmt
+    - goimports
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
