@@ -9,7 +9,7 @@ GO_BIN ?= $(or $(GOBIN),$(if $(GO_GOPATH),$(GO_GOPATH)/bin,$(HOME)/go/bin))
 LEFTHOOK ?= $(GO_BIN)/lefthook
 LEFTHOOK_VERSION ?= v1.11.3
 GOLANGCI_LINT ?= $(GO_BIN)/golangci-lint
-GOLANGCI_LINT_VERSION ?= v1.64.8
+GOLANGCI_LINT_VERSION ?= v2.12.2
 LINT_TIMEOUT ?= 10m
 
 export GO111MODULE = on
@@ -105,7 +105,7 @@ check-go-env:
 .PHONY: check-go-env
 
 install-lint:
-	@$(GO) install github.com/golangci/golangci-lint/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION)
+	@$(GO) install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION)
 .PHONY: install-lint
 
 check-lint:
@@ -135,7 +135,7 @@ lint: check-go-env check-lint
 
 lint-fix: check-go-env check-lint
 	@echo "--> Running linter"
-	@$(GOLANGCI_LINT) run --fix --out-format=tab --issues-exit-code=0 --timeout $(LINT_TIMEOUT)
+	@$(GOLANGCI_LINT) run --fix --issues-exit-code=0 --timeout $(LINT_TIMEOUT)
 .PHONY: lint-fix
 
 lint-changed: check-go-env check-lint
